@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  alpine-python:
+    image: alpine:latest
+    command: tail -f /dev/null
+    volumes:
+      - whisper_text_model_builder:/data  
+    tty: true  
+    container_name: whisper-text-trainer-container
+    environment:
+      - TZ=America/Detroit
+      - RELEASE_VERSION=${RELEASE_VERSION}
+      - SOURCE_TOPIC_NAME=${SOURCE_TOPIC_NAME}
+      - DESTINATION_TOPIC_NAME=${DESTINATION_TOPIC_NAME}
+      - GROUP_ID=${GROUP_ID}
+      - BROKER=${BROKER}
+    networks:
+      - alpine-net
+    entrypoint: |
+      /bin/sh -c "
+      apk add --no-cache python3 py3-pip git tar curl;
+      pip3 install pytz --break-system-packages;
+      pip3 install kafka-python --break-system-packages;
+      pip3 install python-dotenv --break-system-packages;
+
+      if [ ! -d /data/whisper-text-trainer-v${RELEASE_VERSION} ]; then
+        mkdir -p /data/whisper-text-trainer-v${RELEASE_VERSION} && \
+        curl -L https://github.com/DevinMB/whisper-text-trainer/archive/refs/tags/v${RELEASE_VERSION}.tar.gz | tar xz --strip-components=1 -C /data/whisper-text-trainer-v${RELEASE_VERSION};
+      fi
+      
+      python3 /data/whisper-text-trainer-v${RELEASE_VERSION}/whisper-text-trainer.py;
+      "
+
+networks:
+  alpine-net:
+    driver: bridge
+
+volumes:
+  whisper_text_trainer:  

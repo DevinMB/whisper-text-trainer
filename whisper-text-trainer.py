@@ -17,9 +17,6 @@ destination_topic_name = os.getenv('DESTINATION_TOPIC_NAME')
 bootstrap_servers = [os.getenv('BROKER')]  
 group_id = os.getenv('GROUP_ID')  
 
-def base64_serializer(data):
-    return base64.b64encode(data)
-
 consumer = KafkaConsumer(
     source_topic_name,
     bootstrap_servers=bootstrap_servers,
@@ -31,7 +28,7 @@ consumer = KafkaConsumer(
 
 producer = KafkaProducer(
     bootstrap_servers=bootstrap_servers,
-    value_serializer=base64_serializer 
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
 
@@ -115,7 +112,18 @@ converter._experimental_lower_tensor_list_ops = False  # Disable lowering tensor
 
 tflite_model = converter.convert()
 
-producer.send(destination_topic_name, tflite_model)
+# Encode the TFLite model in base64
+model_base64 = base64.b64encode(tflite_model).decode('utf-8')
+
+# Serialize the tokenizer to JSON
+tokenizer_json = tokenizer.to_json()
+
+# Combine the tokenizer and model into a single message
+combined_payload = {
+    "tokenizer": tokenizer_json,
+    "model": model_base64
+}
+
+producer.send(destination_topic_name, value=combined_payload)
 producer.flush()
 
-print(history)
