@@ -1,8 +1,8 @@
 version: '3.8'
 
 services:
-  alpine-python:
-    image: alpine:latest
+  python-kafka-tensorflow:
+    image: python:3.8-slim
     command: tail -f /dev/null
     volumes:
       - whisper_text_model_builder:/data  
@@ -18,11 +18,11 @@ services:
     networks:
       - alpine-net
     entrypoint: |
-      /bin/sh -c "
-      apk add --no-cache python3 py3-pip git tar curl;
-      pip3 install pytz --break-system-packages;
-      pip3 install kafka-python --break-system-packages;
-      pip3 install python-dotenv --break-system-packages;
+      /bin/bash -c "
+      apt-get update && apt-get install -y --no-install-recommends git curl python3-venv;
+      python3 -m venv /venv;
+      source /venv/bin/activate;
+      pip install --no-cache-dir pytz kafka-python python-dotenv tensorflow;
 
       if [ ! -d /data/whisper-text-trainer-v${RELEASE_VERSION} ]; then
         mkdir -p /data/whisper-text-trainer-v${RELEASE_VERSION} && \
@@ -37,4 +37,4 @@ networks:
     driver: bridge
 
 volumes:
-  whisper_text_trainer:  
+  whisper_text_model_builder:  
